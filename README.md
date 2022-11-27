@@ -1,3 +1,3 @@
 # Deep Learning Crash Course
 
-This repository contains code for deep learning fundamentals.
+This repository contains code for the practicals.
