@@ -109,6 +109,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+llm_crash_course/
 
 # Spyder project settings
 .spyderproject
