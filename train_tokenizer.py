@@ -1,14 +1,12 @@
 import os
-import pandas as pd
+import pandas as pd #type:ignore
 from typing import Literal
 
-from tokenizers import Tokenizer
-from tokenizers.models import WordLevel
-from tokenizers.trainers import WordLevelTrainer
-from tokenizers.pre_tokenizers import Whitespace
-from datasets import load_dataset
-
-import warnings
+from tokenizers import Tokenizer #type:ignore
+from tokenizers.models import WordLevel #type:ignore
+from tokenizers.trainers import WordLevelTrainer #type:ignore
+from tokenizers.pre_tokenizers import Whitespace #type:ignore
+from datasets import load_dataset #type:ignore
 
 
 def download_dataset(save_dir:str):
@@ -16,7 +14,7 @@ def download_dataset(save_dir:str):
         raise FileNotFoundError("Directory Does not Exist")
     
     print("Downloading Dataset...")
-    data = load_dataset('Helsinki-NLP/opus-100', 'bn-en', num_proc=1)
+    data = load_dataset('Helsinki-NLP/opus-100', 'bn-en')
     data['train'].to_csv(f"{save_dir}/train_data.csv")
     print("Download Finished. Processing Started.....")
     
@@ -62,9 +60,15 @@ def load_tokenizer(lang:Literal['en', 'bn']):
     return tokenizer
 
 if __name__ == "__main__":
-    warnings.filterwarnings('ignore', category=ResourceWarning)
     save_dir = "./data"
     file_path = download_dataset(save_dir)
     train_and_save_tokenizer(file_path, "./Tokenizer", vocab_size=1000, lang="bn")
     train_and_save_tokenizer(file_path, "./Tokenizer", vocab_size=1000, lang="en")
     
+    print("Testing Trained Tokenizer:")
+    
+    en_tokenizer = load_tokenizer('en')
+    sample_text = input("Enter a text:")
+    encoding = en_tokenizer.encode(sample_text)
+    print(f"Encoding IDS: {encoding.ids}")
+    print(f"Encoding tokens: {encoding.tokens}")
