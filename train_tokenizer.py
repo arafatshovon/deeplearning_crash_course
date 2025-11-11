@@ -1,0 +1,70 @@
+import os
+import pandas as pd
+from typing import Literal
+
+from tokenizers import Tokenizer
+from tokenizers.models import WordLevel
+from tokenizers.trainers import WordLevelTrainer
+from tokenizers.pre_tokenizers import Whitespace
+from datasets import load_dataset
+
+import warnings
+
+
+def download_dataset(save_dir:str):
+    if not os.path.exists(save_dir):
+        raise FileNotFoundError("Directory Does not Exist")
+    
+    print("Downloading Dataset...")
+    data = load_dataset('Helsinki-NLP/opus-100', 'bn-en', num_proc=1)
+    data['train'].to_csv(f"{save_dir}/train_data.csv")
+    print("Download Finished. Processing Started.....")
+    
+    df = pd.read_csv('./data/train_data.csv')
+    df['translation_dict'] = df['translation'].apply(eval)
+
+    df['bn'] = df['translation_dict'].apply(lambda x: x['bn'])
+    df['en'] = df['translation_dict'].apply(lambda x: x['en'])
+
+    df = df.drop('translation_dict', axis=1)
+    file_path = f"{save_dir}/bangla_english_translation.csv"
+    print("Processing Finished...")
+    df.to_csv(file_path, index=False)
+    return file_path
+
+
+def train_and_save_tokenizer(file_path:str, output_path:str, vocab_size:int, lang:str = Literal['bn', 'en']):
+    if not os.path.exists(file_path):
+        raise FileNotFoundError("File Path Does Not Exist")
+    
+    df = pd.read_csv(file_path)
+    df = df.dropna()
+    training_data = df.loc[:, lang].values
+    
+    tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
+    tokenizer.pre_tokenizer = Whitespace()
+    trainer = WordLevelTrainer(vocab_size=vocab_size,
+                               min_frequency=2,
+                               special_tokens=["[UNK]", "[PAD]", "[EOS]", "[SOS]"])
+    
+    print(f"Tokenizer Training Started for Language: {lang}")
+    tokenizer.train_from_iterator(training_data, trainer)
+    print("Tokenizer Training Finished...")
+    
+    os.makedirs(output_path, exist_ok=True)
+    tokenizer.save(f"{output_path}/{lang}_tokenizer.json")
+
+
+def load_tokenizer(lang:Literal['en', 'bn']):
+    if lang not in ['en', 'bn']:
+        raise ValueError("Language must be either 'en' or 'bn'")
+    tokenizer = Tokenizer.from_file(f"./Tokenizer/{lang}_tokenizer.json")
+    return tokenizer
+
+if __name__ == "__main__":
+    warnings.filterwarnings('ignore', category=ResourceWarning)
+    save_dir = "./data"
+    file_path = download_dataset(save_dir)
+    train_and_save_tokenizer(file_path, "./Tokenizer", vocab_size=1000, lang="bn")
+    train_and_save_tokenizer(file_path, "./Tokenizer", vocab_size=1000, lang="en")
+    
