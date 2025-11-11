@@ -1,16 +1,36 @@
 from torch.utils.data import Dataset, DataLoader
 import torch
-from tokenizers import Tokenizer
+from tokenizers import Tokenizer #type:ignore
 from typing import Literal
-import pandas as pd
-import os
+import pandas as pd #type:ignore
+
+from train_tokenizer import load_tokenizer
+
+
+def causal_mask(size):
+    mask = torch.tril(torch.ones(1, size, size), diagonal=1).type(torch.int)
+    return mask  
+
+
+def get_dataloder(config):
+    data = pd.read_csv(config.file_path)
+    val_data = data.sample(frac=config.test_size)
+    train_data = data.drop(val_data.index)
+
+    src_tokenizer = load_tokenizer(config.src_lang)
+    tgt_tokenizer = load_tokenizer(config.tgt_lang)
+    train_dataset = LanguageTranslation(train_dataset, src_tokenizer, tgt_tokenizer, config.src_lang, config.tgt_lang, config.seq_len)
+    val_dataset = LanguageTranslation(val_dataset, src_tokenizer, tgt_tokenizer, config.src_lang, config.tgt_lang, config.seq_len)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=True)
+    return train_dataloader, val_dataloader
 
 
 class LanguageTranslation(Dataset):
-    def __init__(self, ds:pd.DataFrame, split:Literal['bn', 'en'], src_tokenizer:Tokenizer, tgt_tokenizer:Tokenizer, src_lang:str, tgt_lang:str, seq_len:int):
+    def __init__(self, ds:pd.DataFrame, src_tokenizer:Tokenizer, tgt_tokenizer:Tokenizer, src_lang:str, tgt_lang:str, seq_len:int):
         
         self.ds = ds
-        self.split = split
         self.src_tokenizer = src_tokenizer
         self.tgt_tokenizer = tgt_tokenizer
         self.src_lang = src_lang
@@ -55,8 +75,21 @@ class LanguageTranslation(Dataset):
             self.eos_token,
             torch.tensor(self.pad_token*tgt_pad_len, dtype=torch.int64)
         ])
-        
-        
+
+        encoder_mask = (encoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int()
+        decoder_mask = (decoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int() & causal_mask(decoder_input.size(0))
+
+        return {
+            'encoder_input':encoder_input,
+            'decoder_input':decoder_input,
+            'encoder_mask':encoder_mask,
+            'decoder_mask':decoder_mask,
+            'label':label,
+            'src_text':src_text,
+            'tgt_text':tgt_text
+        }
+
+      
         
         
         
