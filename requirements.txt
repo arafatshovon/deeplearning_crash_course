@@ -2,3 +2,5 @@ ipykernel
 datasets
 torch
 tokenizers
+matplotlib
+seaborn

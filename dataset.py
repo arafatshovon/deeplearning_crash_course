@@ -14,6 +14,7 @@ def causal_mask(size):
 
 def get_dataloder(config):
     data = pd.read_csv(config.data_path)
+    data = data[(data['bn_token_len'] < 50) & (data['en_token_len'] < 50)]
     val_data = data.sample(frac=config.test_size)
     train_data = data.drop(val_data.index)
     val_data.reset_index(inplace=True)
@@ -39,15 +40,16 @@ class LanguageTranslation(Dataset):
         self.tgt_lang = tgt_lang
         self.seq_len = seq_len
         
-        self.sos_token = torch.tensor(self.src_tokenizer.token_to_id("[SOS]"))
-        self.eos_token = torch.tensor(self.src_tokenizer.token_to_id("[EOS]"))
-        self.pad_token = self.src_tokenizer.token_to_id("[PAD]")
+        self.sos_token = torch.tensor(self.src_tokenizer.token_to_id("[SOS]"), dtype=torch.int64).unsqueeze(0)
+        self.eos_token = torch.tensor(self.src_tokenizer.token_to_id("[EOS]"), dtype=torch.int64).unsqueeze(0)
+        self.pad_token = [self.src_tokenizer.token_to_id("[PAD]")]
         
     
     def __len__(self):
         return len(self.ds)
     
     def __getitem__(self, index):
+        print(f"Index : {index}")
         src_text = self.ds.loc[index, self.src_lang]
         tgt_text = self.ds.loc[index, self.tgt_lang]
         src_encoding = self.src_tokenizer.encode(src_text)
@@ -90,12 +92,4 @@ class LanguageTranslation(Dataset):
             'src_text':src_text,
             'tgt_text':tgt_text
         }
-
-      
-        
-        
-        
-        
-
-
 
