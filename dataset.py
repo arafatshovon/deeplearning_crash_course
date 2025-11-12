@@ -42,7 +42,7 @@ class LanguageTranslation(Dataset):
         
         self.sos_token = torch.tensor(self.src_tokenizer.token_to_id("[SOS]"), dtype=torch.int64).unsqueeze(0)
         self.eos_token = torch.tensor(self.src_tokenizer.token_to_id("[EOS]"), dtype=torch.int64).unsqueeze(0)
-        self.pad_token = [self.src_tokenizer.token_to_id("[PAD]")]
+        self.pad_token = self.src_tokenizer.token_to_id("[PAD]")
         
     
     def __len__(self):
@@ -65,19 +65,19 @@ class LanguageTranslation(Dataset):
             self.sos_token.unsqueeze(0), 
             torch.tensor(src_encoding.ids, dtype=torch.int64), 
             self.eos_token.unsqueeze(0), 
-            torch.tensor(src_pad_len*self.pad_token, dtype=torch.int64)
+            torch.tensor([self.pad_token]*src_pad_len, dtype=torch.int64)
         ])
         
         decoder_input = torch.cat([
             self.sos_token.unsqueeze(0),
             torch.tensor(tgt_encoding.ids, dtype=torch.int64),
-            torch.tensor(self.pad_token*tgt_pad_len, dtype=torch.int64)
+            torch.tensor([self.pad_token]*tgt_pad_len, dtype=torch.int64)
         ])
         
         label = torch.cat([
             torch.tensor(tgt_encoding.ids, dtype=torch.int64),
             self.eos_token.unsqueeze(0),
-            torch.tensor(self.pad_token*tgt_pad_len, dtype=torch.int64)
+            torch.tensor([self.pad_token]*tgt_pad_len, dtype=torch.int64)
         ])
 
         encoder_mask = (encoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int()
