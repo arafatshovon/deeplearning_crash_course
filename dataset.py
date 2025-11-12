@@ -13,14 +13,16 @@ def causal_mask(size):
 
 
 def get_dataloder(config):
-    data = pd.read_csv(config.file_path)
+    data = pd.read_csv(config.data_path)
     val_data = data.sample(frac=config.test_size)
     train_data = data.drop(val_data.index)
+    val_data.reset_index(inplace=True)
+    train_data.reset_index(inplace=True)
 
     src_tokenizer = load_tokenizer(config.src_lang)
     tgt_tokenizer = load_tokenizer(config.tgt_lang)
-    train_dataset = LanguageTranslation(train_dataset, src_tokenizer, tgt_tokenizer, config.src_lang, config.tgt_lang, config.seq_len)
-    val_dataset = LanguageTranslation(val_dataset, src_tokenizer, tgt_tokenizer, config.src_lang, config.tgt_lang, config.seq_len)
+    train_dataset = LanguageTranslation(train_data, src_tokenizer, tgt_tokenizer, config.src_lang, config.tgt_lang, config.seq_len)
+    val_dataset = LanguageTranslation(val_data, src_tokenizer, tgt_tokenizer, config.src_lang, config.tgt_lang, config.seq_len)
 
     train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=True)
@@ -58,21 +60,21 @@ class LanguageTranslation(Dataset):
             raise ValueError("Seq Length cannot be Less Token Length")
         
         encoder_input = torch.cat([
-            self.sos_token, 
+            self.sos_token.unsqueeze(0), 
             torch.tensor(src_encoding.ids, dtype=torch.int64), 
-            self.eos_token, 
+            self.eos_token.unsqueeze(0), 
             torch.tensor(src_pad_len*self.pad_token, dtype=torch.int64)
         ])
         
         decoder_input = torch.cat([
-            self.sos_token,
+            self.sos_token.unsqueeze(0),
             torch.tensor(tgt_encoding.ids, dtype=torch.int64),
             torch.tensor(self.pad_token*tgt_pad_len, dtype=torch.int64)
         ])
         
         label = torch.cat([
             torch.tensor(tgt_encoding.ids, dtype=torch.int64),
-            self.eos_token,
+            self.eos_token.unsqueeze(0),
             torch.tensor(self.pad_token*tgt_pad_len, dtype=torch.int64)
         ])
 
